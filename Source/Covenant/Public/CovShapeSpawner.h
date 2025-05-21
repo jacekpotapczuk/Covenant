@@ -40,13 +40,22 @@ protected:
 
 	//UPROPERTY()
 	// TObjectPtr<UStaticMeshComponent>
+
+private:
 	TMap<TObjectPtr<UStaticMesh>, TMap<TObjectPtr<UMaterial>, TObjectPtr<UInstancedStaticMeshComponent>>> ComponentMap;
+
+	TMap<TObjectPtr<UMaterial>, int> CountByMaterial;
+	TMap<TObjectPtr<UStaticMesh>, int> CountByMesh;
+
+	int DescriptorsCount = 2;
+	//int MinNumberOfEachDescriptor;
 
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 private:
-	void BalanceShapesAndColors();
+	void BalanceShapesAndColors(UMaterial* RemovedMaterial, UStaticMesh* RemovedMesh);
+	void UpdateVariablesState();
 
 };
