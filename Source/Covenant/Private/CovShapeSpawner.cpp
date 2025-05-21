@@ -6,6 +6,30 @@
 #include "Components/BoxComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
 
+void ACovShapeSpawner::Hit_Implementation(FHitResult HitResult, APawn* InstigatorPawn)
+{
+	if (UInstancedStaticMeshComponent* ISM = Cast<UInstancedStaticMeshComponent>(HitResult.Component))
+	{
+		ISM->RemoveInstance(HitResult.Item);
+	}
+}
+
+FText ACovShapeSpawner::GetTooltip_Implementation(FHitResult HitResult)
+{
+	if (UInstancedStaticMeshComponent* ISM = Cast<UInstancedStaticMeshComponent>(HitResult.Component))
+	{
+		// obviously in full project you don't want to editor names, but I think it's fine for test
+		const auto MeshName =ISM->GetStaticMesh().GetName();
+		const auto MaterialName = ISM->GetMaterial(0)->GetName();
+		const FString CombinedString = FString::Printf(
+			TEXT("Mesh: %s, Color: %s"),
+			*MeshName, *MaterialName);
+		  return FText::FromString(CombinedString); 
+	}
+	
+	return FText::GetEmpty();
+}
+
 ACovShapeSpawner::ACovShapeSpawner()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -51,7 +75,7 @@ void ACovShapeSpawner::BeginPlay()
 	{
 		for (auto Info : MaterialMap.Value)
 		{
-			for (auto i = 0; i < 10; i++)
+			for (auto i = 0; i < NumberOfShapes; i++)
 			{
 				UInstancedStaticMeshComponent* Comp = Info.Value;
 
@@ -78,3 +102,9 @@ void ACovShapeSpawner::Tick(float DeltaTime)
 
 }
 
+
+void ACovShapeSpawner::BalanceShapesAndColors()
+{
+	
+
+}

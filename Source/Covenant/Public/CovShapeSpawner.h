@@ -3,15 +3,20 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "CovHittableInterface.h"
+#include "CovTooltipProvider.h"
 #include "GameFramework/Actor.h"
 #include "CovShapeSpawner.generated.h"
 
 class UBoxComponent;
 
 UCLASS()
-class COVENANT_API ACovShapeSpawner : public AActor
+class COVENANT_API ACovShapeSpawner : public AActor, public ICovHittableInterface, public ICovTooltipProvider
 {
 	GENERATED_BODY()
+
+	void Hit_Implementation(FHitResult HitResult, APawn* InstigatorPawn) override;
+	FText GetTooltip_Implementation(FHitResult HitResult) override;
 	
 public:	
 	// Sets default values for this actor's properties
@@ -40,5 +45,8 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+private:
+	void BalanceShapesAndColors();
 
 };
