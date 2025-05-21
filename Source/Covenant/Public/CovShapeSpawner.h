@@ -34,7 +34,8 @@ protected:
 	TObjectPtr<UBoxComponent> BoundingBox;
 
 	//UPROPERTY()
-	//TMap<FMeshMaterialKey, TObjectPtr<UStaticMeshComponent>> ComponentMap;
+	// TObjectPtr<UStaticMeshComponent>
+	TMap<TObjectPtr<UStaticMesh>, TMap<TObjectPtr<UMaterial>, TObjectPtr<UInstancedStaticMeshComponent>>> ComponentMap;
 
 public:	
 	// Called every frame
