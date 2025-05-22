@@ -16,7 +16,7 @@ ACovShapeSpawner::ACovShapeSpawner()
 	RootComponent = BoundingBox;
 }
 
-void ACovShapeSpawner::Hit_Implementation(FHitResult HitResult, APawn* InstigatorPawn)
+void ACovShapeSpawner::Hit_Implementation(FHitResult HitResult, APawn* InstigatorPawn) 
 {
 	if (UInstancedStaticMeshComponent* ISM = Cast<UInstancedStaticMeshComponent>(HitResult.Component))
 	{
@@ -37,11 +37,11 @@ FText ACovShapeSpawner::GetTooltip_Implementation(FHitResult HitResult)
 		}
 		
 		// obviously in full project you don't want editor names, but I think it's fine for this exercise
-		const auto MeshName = ISM->GetStaticMesh().GetName();
-		const auto MaterialName = ISM->GetMaterial(0)->GetName();
+		const FString MeshName = ISM->GetStaticMesh().GetName();
+		const FString MaterialName = ISM->GetMaterial(0)->GetName();
 		FTransform InstanceTransform;
 		ISM->GetInstanceTransform(HitResult.Item, InstanceTransform);
-		auto Scale = InstanceTransform.GetScale3D();
+		const auto Scale = InstanceTransform.GetScale3D();
 		const FString CombinedString = FString::Printf(TEXT(" %s\n %s\n [%.1f, %.1f, %.1f]"), *MaterialName.RightChop(3), *MeshName, Scale.X, Scale.Y, Scale.Z);
 		return FText::FromString(CombinedString); 
 	}
@@ -138,7 +138,6 @@ void ACovShapeSpawner::InitializeInstancedStaticMeshComponents()
 			
 			InstancedStaticMeshComponent->RegisterComponent();
 			InstancedStaticMeshComponent->AttachToComponent(GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
-			
 			InstancedStaticMeshComponent->SetStaticMesh(Mesh);
 			InstancedStaticMeshComponent->SetMaterial(0, Material);
 			

@@ -87,7 +87,7 @@ public:
 
 	bool RemoveInstance(UStaticMesh* Mesh, UMaterialInterface* Material, int Id = -1)
 	{
-		auto Comp = InternalMap[Mesh][Material];
+		const auto Comp = InternalMap[Mesh][Material];
 		Id = Id == -1 ? Id = Comp->GetInstanceCount() - 1 : Id;
 		const bool DidRemove = Comp->RemoveInstance(Id);
 
@@ -185,6 +185,9 @@ private:
 
 class UBoxComponent;
 
+/*
+ * Spawns and manages balance of given Meshes and Materials.
+ */
 UCLASS()
 class COVENANT_API ACovShapeSpawner : public AActor, public ICovHittableInterface, public ICovTooltipProvider
 {
@@ -202,7 +205,7 @@ protected:
 	void SpawnInitialInstances();
 	void SpawnRandomInstance(UStaticMesh* Mesh, UMaterialInterface* Material);
 	void InitializeInstancedStaticMeshComponents();
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Init")
 	TArray<TObjectPtr<UStaticMesh>> MeshesToSpawn;
 
@@ -228,7 +231,7 @@ private:
 	void UpdateBalanceMetrics();
 	
 	FShapeMap ShapeMap;
-	int DescriptorsCount = 2;
+	int DescriptorsCount;
 	int MinNumberOfEachMesh;
 	int MinNumberOfEachMaterial;
 	int MeshesCount;
@@ -236,6 +239,3 @@ private:
 	FVector BoxMin;
 	FVector BoxMax;
 };
-
-
-
