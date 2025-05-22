@@ -3,6 +3,7 @@
 #include "CovShapeSpawner.h"
 #include "Covenant/Public/CovShapeSpawner.h"
 
+#include "AsyncTreeDifferences.h"
 #include "Algo/RandomShuffle.h"
 #include "Components/BoxComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
@@ -55,13 +56,8 @@ void ACovShapeSpawner::BeginPlay()
 	FTransform IdentityTransform = FTransform();
 
 	ComponentMap = TMap<TObjectPtr<UStaticMesh>, TMap<TObjectPtr<UMaterial>, TObjectPtr<UInstancedStaticMeshComponent>>>();
-	
-	Algo::RandomShuffle(MeshesToSpawn);
-	Algo::RandomShuffle(Materials);
 
 	UpdateVariablesState();
-	int Reminder =  NumberOfShapes % DescriptorsCount;
-	auto InitObjectsPerDescriptor =  NumberOfShapes / (Materials.Num() * MeshesToSpawn.Num());
 
 	for (TObjectPtr<UStaticMesh> Mesh : MeshesToSpawn)
 	{
@@ -78,53 +74,131 @@ void ACovShapeSpawner::BeginPlay()
 			InstancedStaticMeshComponent->SetMaterial(0, Material);
 
 			MeshMap.Add(Material, InstancedStaticMeshComponent);
+			CountByMaterial.Add(Material);
 		}
 
 		ComponentMap.Add(Mesh, MeshMap);
+		CountByMesh.Add(Mesh);
 	}
 
-	for (auto MaterialByMesh : ComponentMap)
+	// Randomize initial elements, but make sure everighting is balanced
+
+	// use temp array to indicate number of each unique shapes
+	auto MeshInstancesCount = TArray<int>();
+
+	for (int i = 0; i < MeshesToSpawn.Num(); i++)
 	{
-		auto Mesh = MaterialByMesh.Key;
-		auto ComponentByMaterial = MaterialByMesh.Value;
-		CountByMesh.Add(Mesh, 0);
+		MeshInstancesCount.Add(MinNumberOfEachMesh);
+	}
+	
+
+	// split remaining randomly
+	auto RemainingMeshes = MeshesCount - (MinNumberOfEachMesh * MeshesCount);
+
+	for (int i = 0; i < RemainingMeshes; i++)
+	{
+		MeshInstancesCount[i] += 1;
+	}
+
+	Algo::RandomShuffle(MeshInstancesCount);
+
+	const FVector BoxMin = BoundingBox->GetComponentLocation() - BoundingBox->GetScaledBoxExtent();
+	const FVector BoxMax = BoundingBox->GetComponentLocation() + BoundingBox->GetScaledBoxExtent();
+	
+		// NumberOfShapes: 11   / DescriptorsCount: 12
+	auto MinShapesPerDescriptor = NumberOfShapes / DescriptorsCount; // 0
+	auto Reminder = NumberOfShapes - MinShapesPerDescriptor * DescriptorsCount;
+
+	auto ShapesPerDescriptorToGenerate = Reminder == 0 ? MinShapesPerDescriptor : MinShapesPerDescriptor + 1;
+	auto ToDelete = Reminder == 0 ? 0 : (DescriptorsCount - Reminder);
+
+	const FString Str = FString::Printf(TEXT("ToDelete: %d"), ToDelete);
+	GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, Str);
+	
+	for (auto Element : ComponentMap)
+	{
+		auto Mesh = Element.Key;
 		
-		for (auto Info : ComponentByMaterial)
+		for (auto Info : Element.Value)
 		{
 			auto Material = Info.Key;
-			auto Component = Info.Value;
-
-			if (!CountByMaterial.Contains(Material))
-			{
-				CountByMaterial.Add(Material, 0);	
-			}
-
-			auto Bonus = Reminder > 0 ? 1 : 0;
-			Reminder -= 1;
-			
-			for (auto i = 0; i < InitObjectsPerDescriptor + Bonus; i++)
+	
+			for (int c = 0; c < ShapesPerDescriptorToGenerate; c++)
 			{
 				UInstancedStaticMeshComponent* Comp = Info.Value;
-
-				const FVector BoxMin = BoundingBox->GetComponentLocation() - BoundingBox->GetScaledBoxExtent();
-				const FVector BoxMax = BoundingBox->GetComponentLocation() + BoundingBox->GetScaledBoxExtent();
 				auto RandomLocation = FMath::RandPointInBox(FBox(BoxMin, BoxMax));
 			
-				//auto a = BoundingBox.
 				FTransform  Transform;
 				Transform.SetLocation(RandomLocation);
 				auto Scale = UE::Math::TVector<double>(1., 1., 1.);
 				Transform.SetScale3D(Scale);
 				Comp->AddInstance(Transform, true);
+	
 				CountByMesh[Mesh] += 1;
 				CountByMaterial[Material] += 1;
+			}
+		}
+	}
+	
+	if (ToDelete > 0)
+	{
+		NumberOfShapes = ShapesPerDescriptorToGenerate * DescriptorsCount;
+
+		auto Deleted = 0;
+		
+		for (auto Element : ComponentMap)
+		{
+			auto Mesh = Element.Key;
+		
+			for (auto Info : Element.Value)
+			{
+				auto Material = Info.Key;
+				auto Comp = Info.Value;
+
+				while (Comp->GetInstanceCount() > 0)
+				{
+					auto bDidRemove = Comp->RemoveInstance(Comp->GetInstanceCount() - 1);
+
+					if (bDidRemove)
+					{
+						BalanceShapesAndColors(Material, Mesh);
+						Deleted += 1;
+					
+						if (Deleted == ToDelete)
+						{
+							break;
+						}
+					}
+					// else
+					// {
+					// 	break;
+					// }
+				}
+
+				const FString Straa = FString::Printf(TEXT("Check: %d"), Comp->GetInstanceCount());
+				GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, Straa);
+
 				
 
-				GEngine->AddOnScreenDebugMessage(-1,2.0f, FColor::Green,RandomLocation.ToString());
+				if (Deleted == ToDelete)
+				{
+					break;
+				}
 			}
-		}	
+
+			if (Deleted == ToDelete)
+			{
+				break;
+			}
+		}
+		
+		const FString Stra = FString::Printf(TEXT("Deleted: %d"), Deleted);
+		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, Stra);
 	}
+	
 }
+
+
 
 void ACovShapeSpawner::Tick(float DeltaTime)
 {
@@ -144,9 +218,6 @@ void ACovShapeSpawner::BalanceShapesAndColors(UMaterial* RemovedMaterial, UStati
 
 	auto RemovedMaterialCount = CountByMaterial[RemovedMaterial];
 	auto RemovedMeshCount = CountByMesh[RemovedMesh];
-
-	auto MinNumberOfEachMesh = NumberOfShapes / MeshesToSpawn.Num();
-	auto MinNumberOfEachMaterial = NumberOfShapes / Materials.Num();
 	
 	bool bAreMaterialsBalanced = RemovedMaterialCount >= MinNumberOfEachMaterial;
 
@@ -259,6 +330,10 @@ void ACovShapeSpawner::BalanceShapesAndColors(UMaterial* RemovedMaterial, UStati
 
 void ACovShapeSpawner::UpdateVariablesState()
 {
-	DescriptorsCount = Materials.Num() * MeshesToSpawn.Num();
-	//MinNumberOfEachDescriptor = NumberOfShapes / DescriptorsCount;
+	MeshesCount = MeshesToSpawn.Num();
+	MaterialsCount = Materials.Num();
+	DescriptorsCount = MeshesCount * MaterialsCount;
+	MinNumberOfEachMesh = NumberOfShapes / MeshesCount;
+	MinNumberOfEachMaterial = NumberOfShapes / MaterialsCount;
+	
 }

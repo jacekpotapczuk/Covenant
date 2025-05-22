@@ -37,7 +37,7 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UBoxComponent> BoundingBox;
-
+	
 	//UPROPERTY()
 	// TObjectPtr<UStaticMeshComponent>
 
@@ -48,7 +48,10 @@ private:
 	TMap<TObjectPtr<UStaticMesh>, int> CountByMesh;
 
 	int DescriptorsCount = 2;
-	//int MinNumberOfEachDescriptor;
+	int MinNumberOfEachMesh;
+	int MinNumberOfEachMaterial;
+	int MeshesCount;
+	int MaterialsCount;
 
 public:	
 	// Called every frame
