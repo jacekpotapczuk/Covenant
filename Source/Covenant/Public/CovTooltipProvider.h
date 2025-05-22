@@ -14,7 +14,7 @@ class UCovTooltipProvider : public UInterface
 };
 
 /**
- * 
+ * Interface for actors that can provide Tooltip text.
  */
 class COVENANT_API ICovTooltipProvider
 {

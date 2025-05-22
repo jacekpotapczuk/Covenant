@@ -14,7 +14,7 @@ class UCovHittableInterface : public UInterface
 };
 
 /**
- * 
+ * Interface for actors that can be hittable.
  */
 class COVENANT_API ICovHittableInterface
 {
